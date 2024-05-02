@@ -4,6 +4,9 @@
 Basic indexed typeclasses (in Atkey-style),
 inspired by the Haskell Prelude and "Parameterised Notions of Computation" by Robert Atkey.
 *)
+
+infix 1 BIND
+
 signature IFUNCTOR_BASE =
 sig
 
@@ -71,6 +74,7 @@ sig
 include IMONAD_BASE
 val join : ('i, 'j, ('j, 'k, 'a) t) t -> ('i, 'k, 'a) t
 val >=> : ('a -> ('i, 'j, 'b) t) -> ('b -> ('j, 'k, 'c) t) -> 'a -> ('i, 'k, 'c) t
+val BIND : ('i, 'j, 'a) t * ('a -> ('j, 'k, 'b) t) -> ('i, 'k, 'b) t
 
 end
 
@@ -80,6 +84,7 @@ struct
 open M
 fun join x = bind x I
 fun >=> fm gm x = bind (fm x) gm
+fun m BIND f = bind m f
 
 end
 
@@ -93,6 +98,16 @@ include IMONAD_BASE
 val lift : 'a M.t -> ('i, 'i, 'a) t
 
 end
+
+
+(* can't do this: duplicate inclusion of IMONAD_BASE *)
+(* signature IMONAD_TRANS =
+sig
+
+include IMONAD_TRANS_BASE
+(* include IMONAD *)
+
+end *)
 
 functor Monad_Trans_IMonad_Trans(structure IMT : IMONAD_TRANS; structure T : GROUND_TYPE) : MONAD_TRANS =
 struct

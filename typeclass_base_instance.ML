@@ -132,7 +132,7 @@ fun traverse f = T.traverse (fn sq => F.foldr (A.liftA2 cons o f) sq (A.pure [])
 end
 
 (*Note: this does not yield a monad unless the argument monad is commutative;
-cf https://wiki.haskell.org/ListT_done_right*)
+cf https://wiki.haskell.org/ListT_done_right *)
 functor List_Monad_Trans(M : MONAD_BASE) : MONAD_TRANS =
 struct
 
@@ -146,7 +146,7 @@ structure T = List_Traversable_Trans(Identity_Traversable(M))
 fun pure x = M.pure (single x)
 fun <*> f x = M.bind x (fn x => M.bind f (maps (fn f => F.map f x) #> M.pure))
 
-fun bind x f = M.bind x (fn x => M.bind (T.traverse f x) (flat #> M.pure))
+fun bind x f = M.bind x (T.traverse f #> M.map flat)
 
 end
 

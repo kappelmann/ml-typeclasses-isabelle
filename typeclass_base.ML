@@ -3,6 +3,9 @@
 
 Basic typeclasses inspired by the Haskell Prelude.
 *)
+
+infix 1 BIND
+
 signature FUNCTOR_BASE =
 sig
   type 'a t
@@ -57,6 +60,9 @@ sig
   include MONAD_BASE
   val join : ('a t) t -> 'a t
   val >=> : ('a -> 'b t) -> ('b -> 'c t) -> 'a -> 'c t
+  val BIND : ('a t * ('a -> 'b t)) -> 'b t
+  val flat1 : ('a -> 'b t) t -> 'a -> 'b t
+  val flat2 : ('a -> 'b -> 'c t) t -> 'a -> 'b -> 'c t
 end
 
 functor Monad(M : MONAD_BASE) : MONAD =
@@ -65,6 +71,9 @@ struct
 open M
 fun join x = bind x I
 fun >=> fm gm x = bind (fm x) gm
+fun m BIND f = bind m f
+fun flat1 fm x = M.bind fm (fn f => f x)
+fun flat2 fm x = M.map (fn f => f x) fm |> flat1
 
 end
 
