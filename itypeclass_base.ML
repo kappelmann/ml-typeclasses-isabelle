@@ -99,16 +99,6 @@ val lift : 'a M.t -> ('i, 'i, 'a) t
 
 end
 
-
-(* can't do this: duplicate inclusion of IMONAD_BASE *)
-(* signature IMONAD_TRANS =
-sig
-
-include IMONAD_TRANS_BASE
-(* include IMONAD *)
-
-end *)
-
 functor Monad_Trans_IMonad_Trans(structure IMT : IMONAD_TRANS; structure T : GROUND_TYPE) : MONAD_TRANS =
 struct
 

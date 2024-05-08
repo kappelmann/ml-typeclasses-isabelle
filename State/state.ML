@@ -30,9 +30,6 @@ val kleisli : ('a -> 'b) -> 'a -> ('s, 's, 'b) state
 val kleisli_state : ('a -> 's -> 'b) -> 'a -> ('s, 's, 'b) state
 val kleisli_state_monad : ('a -> 's -> 'b M.t) -> 'a -> ('s, 's, 'b) state
 
-(* val lift_state_single : ('a -> 'b -> 'c) -> 'a -> 'b -> ('b, 'c) SR.result M.t
-val lift_state_monad : ('a -> 'b -> 'c M.t) -> 'a -> 'b -> ('b, 'c) SR.result M.t *)
-
 end
 
 functor State_Trans(structure M : MONAD_BASE; structure SR : STATE_RESULT_BASE) : STATE_TRANS =
@@ -77,9 +74,6 @@ fun kleisli f = IK.arr f
 
 fun kleisli_state f x = get () |> map (f x)
 fun kleisli_state_monad f x = (fn s => M.map (SR.result s) (f x s))
-
-(* fun lift_state_single f = (* interp o *) kleisli_state f
-fun lift_state_monad fsq = (* interp o *) kleisli_state_monad fsq *)
 
 end
 
