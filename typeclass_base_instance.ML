@@ -146,7 +146,7 @@ structure T = List_Traversable_Trans(Identity_Traversable(M))
 fun pure x = M.pure (single x)
 fun <*> f x = M.bind x (fn x => M.bind f (maps (fn f => F.map f x) #> M.pure))
 
-fun bind x f = M.bind x (T.traverse f #> M.map flat)
+fun bind x f = M.bind x (fn x => M.bind (T.traverse f x) (flat #> M.pure))
 
 end
 
@@ -210,4 +210,3 @@ structure A = Applicative(T.A)
 fun traverse f = T.traverse (fn NONE => A.pure NONE | SOME x => A.map SOME (f x))
 
 end
-

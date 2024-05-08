@@ -99,7 +99,5 @@ structure SRS = State_Result_Stack(S.SR)
 
 fun push_state_monad lense f x = S.M.map (SR.map_state (SRS.push (lense x))) o f x
 fun lift_push_state_monad lense = push_state_monad lense o S.kleisli_state_monad
-(* make (kleisli) state transformer from function taking input and current state,
-whose input (at the given `lense`) is also pushed onto the stack *)
 
 end
