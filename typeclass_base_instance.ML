@@ -132,7 +132,7 @@ fun traverse f = T.traverse (fn sq => F.foldr (A.liftA2 cons o f) sq (A.pure [])
 end
 
 (*Note: this does not yield a monad unless the argument monad is commutative;
-cf https://wiki.haskell.org/ListT_done_right*)
+cf https://wiki.haskell.org/ListT_done_right *)
 functor List_Monad_Trans(M : MONAD_BASE) : MONAD_TRANS =
 struct
 
@@ -210,4 +210,3 @@ structure A = Applicative(T.A)
 fun traverse f = T.traverse (fn NONE => A.pure NONE | SOME x => A.map SOME (f x))
 
 end
-
