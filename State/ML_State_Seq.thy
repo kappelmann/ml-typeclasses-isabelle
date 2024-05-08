@@ -10,7 +10,7 @@ ML\<open>
   structure State_Stack_Seq = State_Stack(State_Seq)
 
   infix 1 Seq_THEN
-  fun fs1 Seq_THEN fs2 = Seq.THEN (fs1, fs2)
+  fun fs1 Seq_THEN fs2 = Seq_Monad.bind fs1 fs2
 
   infix 1 State_Seq_THEN
   fun stsq State_Seq_THEN ifstsq = State_Seq.bind stsq ifstsq

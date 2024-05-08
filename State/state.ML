@@ -26,10 +26,6 @@ val put : 'so -> ('si, 'so, unit) state
 val map_state : ('sj -> 'so) -> ('si, 'sj, 'a) state -> ('si, 'so, 'a) state
 val map_result : ('a -> 'sj -> ('so, 'b) SR.result) -> ('si, 'sj, 'a) state -> ('si, 'so, 'b) state
 
-val kleisli : ('a -> 'b) -> 'a -> ('s, 's, 'b) state
-val kleisli_state : ('a -> 's -> 'b) -> 'a -> ('s, 's, 'b) state
-val kleisli_state_monad : ('a -> 's -> 'b M.t) -> 'a -> ('s, 's, 'b) state
-
 end
 
 functor State_Trans(structure M : MONAD_BASE; structure SR : STATE_RESULT_BASE) : STATE_TRANS =
@@ -68,36 +64,5 @@ open IMT
 
 fun map_state f = map_base (SR.map_state f)
 fun map_result f = map_base (SR.map f)
-
-structure IK = IKleisli_IArrow_Apply(IMT)
-fun kleisli f = IK.arr f
-
-fun kleisli_state f x = get () |> map (f x)
-fun kleisli_state_monad f x = (fn s => M.map (SR.result s) (f x s))
-
-end
-
-signature STATE_STACK =
-sig
-
-structure S : STATE_TRANS
-structure SRS : STATE_RESULT_STACK
-
-val push_state_monad : ('a -> 'sc) -> ('a -> ('si, ('sa, 'sb) SRS.entry, 'b) S.state) ->
-  'a -> ('si, ('sa, ('sb, 'sc) SRS.entry) SRS.entry, 'b) S.state
-val lift_push_state_monad : ('a -> 'sk) -> ('a -> ('si, 'sj) SRS.entry -> 'b S.M.t) ->
-  'a -> (('si, 'sj) SRS.entry, ('si, ('sj, 'sk) SRS.entry) SRS.entry, 'b) S.state
-
-end
-
-functor State_Stack(S : STATE_TRANS) : STATE_STACK =
-struct
-
-structure S = S
-structure SR = State_Result(S.SR)
-structure SRS = State_Result_Stack(S.SR)
-
-fun push_state_monad lense f x = S.M.map (SR.map_state (SRS.push (lense x))) o f x
-fun lift_push_state_monad lense = push_state_monad lense o S.kleisli_state_monad
 
 end

@@ -11,7 +11,7 @@ signature IFUNCTOR_BASE =
 sig
 
 type ('i, 'o, 'a) t
-(*TODO: should we also require contravariant in first and covariance in second parameter?
+(*TODO: should we also require contravariance in first and covariance in second parameter?
 cf. paper by Atkey*)
 val map : ('a -> 'b) -> ('i, 'o, 'a) t -> ('i, 'o, 'b) t
 
