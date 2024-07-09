@@ -31,13 +31,17 @@ signature APPLICATIVE =
 sig
   include APPLICATIVE_BASE
   val liftA2 : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
+  val sequence : 'a t list -> 'a list t
 end
 
 functor Applicative(A : APPLICATIVE_BASE) : APPLICATIVE =
 struct
 
 open A
+
 fun liftA2 f x = A.<*> (A.map f x)
+fun sequence [] = pure []
+  | sequence (x :: xs) = liftA2 cons x (sequence xs)
 
 end
 
