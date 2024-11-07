@@ -1,20 +1,20 @@
-(*  Title:  icategory_util.ML
+(*  Title:  category_util.ML
     Author: Kevin Kappelmann
 
-Utilities on indexed categories
+Utilities on categories
 *)
-signature IARROW_EXCEPTION_REC =
+signature ARROW_EXCEPTION_REC =
 sig
-  include IARROW_EXCEPTION
-  val repeat : ('p1, 'i, 'i, 'a, 'a) cat -> ('p1, 'i, 'i, 'a, 'a) cat
-  val try_step : ('p1, 'i, 'j, 'a, 'b) cat -> ('p1, 'i, 'i, 'a, 'a) cat -> ('p1, 'i, 'j, 'a, 'b) cat
+  include ARROW_EXCEPTION
+  val repeat : ('p1, 'a, 'a) cat -> ('p1, 'a, 'a) cat
+  val try_step : ('p1, 'a, 'b) cat -> ('p1, 'a, 'a) cat -> ('p1, 'a, 'b) cat
 end
 
-functor IArrow_Exception_Rec(
-    structure A : IARROW_EXCEPTION
-    structure L : ILAZY_COMP
+functor Arrow_Exception_Rec(
+    structure A : ARROW_EXCEPTION
+    structure L : LAZY_COMP
     sharing type L.cat = A.cat
-  ) : IARROW_EXCEPTION_REC =
+  ) : ARROW_EXCEPTION_REC =
 struct
 
 open A
@@ -24,31 +24,31 @@ fun try_step f step = catch' f (L.comp_lazy (fn _ => try_step f step) step)
 
 end
 
-signature IARROW_FOLD =
+signature ARROW_FOLD =
 sig
-  include IARROW_BASE
+  include ARROW_BASE
 
   type 'a res
   val stop : 'a -> 'a res
   val continue : 'a -> 'a res
   val dest_res : 'a res -> 'a
 
-  val fold : ('p1, 'j, 'i, 'a, 'a) cat -> ('p1, 'i, 'j, 'a * 'b, 'b res) cat ->
-    ('p1, 'i, 'j, 'a * 'b, 'b res) cat
+  val fold : ('p1, 'a, 'a) cat -> ('p1, 'a * 'b, 'b res) cat ->
+    ('p1, 'a * 'b, 'b res) cat
 
-  val fold_init : ('p1, 'i, 'i, 'a, 'a) cat -> ('p1, 'i, 'i, 'a * 'b, 'b res) cat ->
-    ('p1, 'i, 'i, 'a, 'b res) cat -> ('p1, 'i, 'i, 'a, 'b res) cat
+  val fold_init : ('p1, 'a, 'a) cat -> ('p1, 'a * 'b, 'b res) cat ->
+    ('p1, 'a, 'b res) cat -> ('p1, 'a, 'b res) cat
 end
 
-functor IArrow_Fold_Exception_Choice(
-    structure A : IARROW
-    structure AE : IARROW_EXCEPTION_REC
+functor Arrow_Fold_Exception_Choice(
+    structure A : ARROW
+    structure AE : ARROW_EXCEPTION_REC
     sharing type AE.cat = A.cat
-    structure AC : IARROW_CHOICE_BASE
+    structure AC : ARROW_CHOICE_BASE
     sharing type AC.cat = A.cat
-    structure L : ILAZY_COMP
+    structure L : LAZY_COMP
     sharing type L.cat = A.cat
-  ) : IARROW_FOLD =
+  ) : ARROW_FOLD =
 struct
 
 datatype 'a res = Stop of 'a | Continue of 'a
@@ -60,7 +60,7 @@ fun dest_res (Stop x) = x
 
 open A
 
-local structure SC = ISemi_Category(AE) open SC
+local structure SC = Semi_Category(AE) open SC
 in
 
 fun fold_step next cont = arr (fn (_, res as Stop _) => Either.Left res | x => Either.Right x)
