@@ -102,13 +102,18 @@ signature ARROW_APPLY =
 sig
   include ARROW_APPLY_BASE
   val uncurry : ('a -> ('p1, 'b, 'c) cat) -> ('p1, ('a * 'b), 'c) cat
+  val app' : 'a -> ('p1, ('p1, 'a, 'b) cat, 'b) cat
 end
 
 functor Arrow_Apply(A : ARROW_APPLY_BASE) : ARROW_APPLY =
 struct
 
 open A
-fun uncurry f = A.comp A.app (A.arr (apfst f))
+local structure SC = Semi_Category(A) open SC
+in
+fun uncurry f = arr (apfst f) >>> app
+fun app' x = arr (rpair x) >>> app
+end
 
 end
 

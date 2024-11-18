@@ -44,8 +44,8 @@ sig
   val get : unit -> ('p1, 's, 's, 's) state
   val put : 'so -> ('p1, 'si, 'so, unit) state
 
-  val eval : ('p1, 'si, 'so, 'a) state -> 'si -> ('p1, 'a) M.t
-  val exec : ('p1, 'si, 'so, 'a) state -> 'si -> ('p1, 'so) M.t
+  val eval : 'si -> ('p1, 'si, 'so, 'a) state -> ('p1, 'a) M.t
+  val exec : 'si -> ('p1, 'si, 'so, 'a) state -> ('p1, 'so) M.t
 end
 
 functor State_Trans(structure M : MONAD_BASE; structure SR : STATE_RESULT_BASE) : STATE_TRANS =
@@ -81,8 +81,8 @@ fun put s = state (fn _ => SR.result s ())
 end
 open MS
 
-fun eval st s = st s |> M.map SR.value
-fun exec st s = st s |> M.map SR.state
+fun eval s st = st s |> M.map SR.value
+fun exec s st = st s |> M.map SR.state
 
 end
 

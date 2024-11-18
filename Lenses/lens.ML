@@ -22,6 +22,8 @@ sig
   val get : ('p1, 't, 'o, 's, 'i) lens -> ('p1, 's, 'i) getter
   val modify : ('p1, 't, 'o, 's, 'i) lens -> ('p1, 't, 'o, 's, 'i) modifier
 
+  val comp_modify : ('p1, 'o, 'u, 'i, 'j) modifier -> ('p1, 't, 'o, 's, 'i) modifier ->
+    ('p1, 't, 'u, 's, 'j) modifier
   include ICATEGORY_BASE
   sharing type cat = lens
 end
@@ -51,13 +53,15 @@ type ('p1, 'i, 'j, 'a, 'b) cat = ('p1, 'i, 'j, 'a, 'b) lens
 
 fun id _ = lens (A.id ()) AA.app
 
+fun comp_modify m1 m2 = AA.uncurry (A.curry m2 o A.curry m1)
+
 fun comp l1 l2 =
   let
     val g1 = get l1
     val m1 = modify l1
     val g2 = get l2
     val m2 = modify l2
-  in lens (A.comp g1 g2) (AA.uncurry (A.curry m2 o A.curry m1)) end
+  in lens (A.comp g1 g2) (comp_modify m1 m2) end
 
 end
 
@@ -71,8 +75,8 @@ sig
   val set : ('p1, 't, 'o, 's, 'i) lens -> ('p1, 't, 's, 'o) setter
 
   val lens_get : ('p1, 's, 'i) C.cat -> ('p1, 'o, 'o, 's, 'i) lens
-  val lens_modify : ('p1, 'o, 't) C.cat -> ('p1, 't, 'o, 'i, 'i) lens
-  val lens_get_modify : ('p1, 's, 'i) C.cat -> ('p1, 'u, 'o) C.cat -> ('p1, 'o, 'u, 's, 'i) lens
+  val lens_mk : ('p1, 'o, 't) C.cat -> ('p1, 't, 'o, 'i, 'i) lens
+  val lens_get_mk : ('p1, 's, 'i) C.cat -> ('p1, 'u, 'o) C.cat -> ('p1, 'o, 'u, 's, 'i) lens
 
   (*pairs*)
   val get_fst : ('p1, 's, 'i1 * 'i2) getter -> ('p1, 's, 'i1) getter
@@ -81,6 +85,9 @@ sig
   val modify_snd : ('p1, 't, 'i1 * 'o2, 's, 'i1 * 'i2) modifier -> ('p1, 't, 'o2, 's, 'i2) modifier
   val lens_fst : ('p1, 't, 'o1 * 'i2, 's, 'i1 * 'i2) lens -> ('p1, 't, 'o1, 's, 'i1) lens
   val lens_snd : ('p1, 't, 'i1 * 'o2, 's, 'i1 * 'i2) lens -> ('p1, 't, 'o2, 's, 'i2) lens
+
+  val modify_K : ('p1, 't, (('p1, 'a, 'o) C.cat), 's, 'i) modifier -> ('p1, 't, 'o, 's, 'i) modifier
+  val lens_K : ('p1, 't, (('p1, 'a, 'o) C.cat), 's, 'i) lens -> ('p1, 't, 'o, 's, 'i) lens
 end
 
 functor Lens(structure A : ARROW; structure L : LENS_BASE sharing type L.C.cat = A.cat) : LENS =
@@ -96,11 +103,11 @@ fun set l = C.comp (modify l) (A.first (A.arr A.K))
 fun lens_get f =
   L.lens (L.id () |> L.get |> L.C.comp f) (A.second f |> L.C.comp (L.modify (L.id ())))
 
-fun lens_modify f =
+fun lens_mk f =
   let val id = L.id ()
   in L.lens (L.get id) (L.C.comp f (L.modify id)) end
 
-fun lens_get_modify get modify = lens_get get |> comp (lens_modify modify)
+fun lens_get_mk get modify = lens_get get |> comp (lens_mk modify)
 
 (*pairs*)
 fun get_fst f = C.comp (A.arr fst) f
@@ -111,9 +118,14 @@ fun modify_snd f = C.comp f (A.first (A.arr A.second))
 fun lens_fst l = lens (get_fst (get l)) (modify_fst (modify l))
 fun lens_snd l = lens (get_snd (get l)) (modify_snd (modify l))
 
+local open A in
+fun modify_K m = C.comp m (first (arr (C.comp (arr K))))
+fun lens_K l = lens (get l) (modify_K (modify l))
 end
 
-signature LENS_PAIR =
+end
+
+signature PAIR_LENS =
 sig
   include LENS_BASE
   val get_pair :
@@ -125,13 +137,13 @@ sig
     ('p1, 't1 * 't2, 'o1 * 'o2, 's1 * 's2, 'i1 * 'i2) lens
 end
 
-functor Lens_Pair(
+functor Pair_Lens(
     structure A : ARROW
     structure AA : ARROW_APPLY_BASE
     sharing type AA.cat = A.cat
     structure L : LENS_BASE
     sharing type L.C.cat = A.cat
-  ) : LENS_PAIR =
+  ) : PAIR_LENS =
 struct
 
 open L
@@ -149,6 +161,43 @@ fun modify_pair g m1 m2 =
 fun lens_pair l1 l2 =
   let val g = get_pair (L.get l1) (L.get l2)
   in L.lens g (modify_pair g (L.modify l1) (L.modify l2)) end
+end
+
+end
+
+signature LENS_APP =
+sig
+  include LENS
+  val get_app : 'a -> ('p1, 's, (('p1, 'a, 'i) C.cat)) getter -> ('p1, 's, 'i) getter
+  val modify_app : 'a -> ('p1, 't, 'o, 's, (('p1, 'a, 'i) C.cat)) modifier ->
+    ('p1, 't, 'o, 's, 'i) modifier
+  val lens_app : 'a -> ('p1, 't, 'o, 's, (('p1, 'a, 'i) C.cat)) lens -> ('p1, 't, 'o, 's, 'i) lens
+
+  val modify_app_K : 'a -> ('p1, 't, (('p1, 'b, 'o) C.cat), 's, (('p1, 'a, 'i) C.cat)) modifier ->
+    ('p1, 't, 'o, 's, 'i) modifier
+  val lens_app_K : 'a -> ('p1, 't, (('p1, 'b, 'o) C.cat), 's, (('p1, 'a, 'i) C.cat)) lens ->
+    ('p1, 't, 'o, 's, 'i) lens
+end
+
+functor Lens_App(
+    structure A : ARROW
+    structure AA : ARROW_APPLY
+    sharing type AA.cat = A.cat
+    structure L : LENS
+    sharing type L.C.cat = A.cat
+  ) : LENS_APP =
+struct
+
+open L
+
+local structure SC = Semi_Category(A) open SC A
+in
+fun get_app x = C.comp (AA.app' x)
+fun modify_app x m = first (arr (fn m' => AA.app' x >>> m')) >>> m
+fun lens_app x l = lens (get_app x (get l)) (modify_app x (modify l))
+
+fun modify_app_K x m = modify_K (modify_app x m)
+fun lens_app_K x l = lens_K (lens_app x l)
 end
 
 end

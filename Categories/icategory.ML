@@ -95,12 +95,17 @@ signature IARROW_APPLY =
 sig
   include IARROW_APPLY_BASE
   val uncurry : ('a -> ('p1, 'i, 'j, 'b, 'c) cat) -> ('p1, 'i, 'j, 'a * 'b, 'c) cat
+  val app' : 'a -> ('p1, 'i, 'j, ('p1, 'i, 'j, 'a, 'b) cat, 'b) cat
 end
 
 functor IArrow_Apply(A : IARROW_APPLY_BASE) : IARROW_APPLY =
 struct
 open A
-fun uncurry f = A.comp A.app (A.arr (apfst f))
+local structure SC = ISemi_Category(A) open SC
+in
+fun uncurry f = arr (apfst f) >>> app
+fun app' x = arr (rpair x) >>> app
+end
 end
 
 signature IARROW_ZERO_BASE =
