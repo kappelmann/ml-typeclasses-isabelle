@@ -5,9 +5,9 @@ theory ML_Categories
     ML_Unification.ML_General_Utils
 begin
 
-ML_file\<open>category.ML\<close>
-ML_file\<open>category_instance.ML\<close>
+ML_gen_file\<open>category.ML\<close>
+ML_gen_file\<open>category_instance.ML\<close>
 
-ML_file\<open>category_util.ML\<close>
+ML_gen_file\<open>category_util.ML\<close>
 
 end

@@ -5,9 +5,9 @@ theory ML_ICategories
     ML_ITypeclasses_Base
 begin
 
-ML_file\<open>icategory.ML\<close>
-ML_file\<open>icategory_instance.ML\<close>
+ML_gen_file\<open>icategory.ML\<close>
+ML_gen_file\<open>icategory_instance.ML\<close>
 
-ML_file\<open>icategory_util.ML\<close>
+ML_gen_file\<open>icategory_util.ML\<close>
 
 end

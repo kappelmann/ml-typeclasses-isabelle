@@ -3,9 +3,10 @@ theory ML_State
   imports
     ML_ITypeclasses
     ML_ICategories
+    ML_State_Base
 begin
 
-ML_file\<open>state_result.ML\<close>
-ML_file\<open>state.ML\<close>
+ML_gen_file\<open>state.ML\<close>
+ML_gen_file\<open>istate.ML\<close>
 
 end
