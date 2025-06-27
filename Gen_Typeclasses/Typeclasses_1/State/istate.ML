@@ -5,8 +5,8 @@ Indexed state monads; adapted from Haskell's mtl package.
 *)
 signature \<^eval>\<open>sfx_ParaT_nargs "IMONAD_STATE_BASE"\<close> =
 sig
-  structure SR : STATE_RESULT_BASE
   include \<^eval>\<open>sfx_ParaT_nargs "IMONAD_BASE"\<close>
+  structure SR : STATE_RESULT_BASE
   val state : ('si -> ('so, 'a) SR.result) -> (@{ParaT_args} 'si, 'so, 'a) t
   val get : unit -> (@{ParaT_args} 's, 's, 's) t
   val put : 'so -> (@{ParaT_args} 'si, 'so, unit) t
@@ -46,6 +46,7 @@ sig
   val get : unit -> (@{ParaT_args} 's, 's, 's) state
   val put : 'so -> (@{ParaT_args} 'si, 'so, unit) state
 
+  val run : 'si -> (@{ParaT_args} 'si, 'so, 'a) state -> (@{ParaT_args} ('so, 'a) SR.result) M.t
   val eval : 'si -> (@{ParaT_args} 'si, 'so, 'a) state -> (@{ParaT_args} 'a) M.t
   val exec : 'si -> (@{ParaT_args} 'si, 'so, 'a) state -> (@{ParaT_args} 'so) M.t
 end
@@ -86,8 +87,9 @@ fun put s = state (fn _ => SR.result s ())
 end
 open MS
 
-fun eval s st = st s |> M.map SR.value
-fun exec s st = st s |> M.map SR.state
+fun run s st = st s
+fun eval s = run s #> M.map SR.value
+fun exec s = run s #> M.map SR.state
 
 end
 
@@ -113,32 +115,53 @@ functor \<^eval>\<open>sfx_ParaT_nargs "IMonad_Exception_State_Trans"\<close>(
     where type (@{ParaT_args} 'i, 'j, 'a) t = (@{ParaT_args} 'i, 'j, 'a) S.t
   =
 struct
-
 open M
 fun throw e = S.lift (M.throw e)
 fun catch m f s = M.catch (m s) (fn e => f e s)
 open S
+end
 
+functor \<^eval>\<open>sfx_ParaT_nargs "IMonad_State_State_Trans"\<close>(A :
+  sig
+    structure M : \<^eval>\<open>sfx_ParaT_nargs "MONAD_STATE_BASE"\<close>
+    structure S : \<^eval>\<open>sfx_ParaT_nargs "ISTATE_TRANS"\<close>
+    sharing type S.M.t = M.t
+    type ParaT
+  end
+  ) :
+    (*note: not an indexed monad; the state type of S is stored into the parameters types of M while
+    the parameter types of S are passed as an argument ParaT*)
+    \<^eval>\<open>sfx_ParaT_nargs "MONAD_STATE_BASE"\<close>
+    where type (@{ParaT_args} 'a) t = (A.ParaT, @{ParaT_arg 0}, @{ParaT_arg 0}, 'a) A.S.t
+  =
+struct
+open A A.M
+open S
+type (@{ParaT_args} 'a) t = (A.ParaT, @{ParaT_arg 0}, @{ParaT_arg 0}, 'a) A.S.t
+structure SR = A.M.SR
+fun state fs = S.lift (A.M.state fs)
+fun get _ = S.lift (A.M.get ())
+fun put s = S.lift (A.M.put s)
 end
 
 signature \<^eval>\<open>sfx_ParaT_nargs "IARROW_STATE_BASE"\<close> =
 sig
   include \<^eval>\<open>sfx_ParaT_nargs "IARROW_BASE"\<close>
-  val get : unit -> (@{ParaT_args} 's, 's, 'a, 's) cat
-  val put : unit -> (@{ParaT_args} 'si, 'so, 'so, unit) cat
+  val get : unit -> (@{ParaT_args} 's, 's, 'a, 's) morph
+  val put : unit -> (@{ParaT_args} 'si, 'so, 'so, unit) morph
 end
 
 signature \<^eval>\<open>sfx_ParaT_nargs "IARROW_STATE"\<close> =
 sig
   include \<^eval>\<open>sfx_ParaT_nargs "IARROW_STATE_BASE"\<close>
-  val change : (@{ParaT_args} 'si, 'sm, 'a * 'si, 'so) cat -> (@{ParaT_args} 'si, 'so, 'a, 'a) cat
-  val access : (@{ParaT_args} 'si, 'so, 'a * 'si, 'b) cat -> (@{ParaT_args} 'si, 'so, 'a, 'b) cat
+  val change : (@{ParaT_args} 'si, 'sm, 'a * 'si, 'so) morph -> (@{ParaT_args} 'si, 'so, 'a) emorph
+  val access : (@{ParaT_args} 'si, 'so, 'a * 'si, 'b) morph -> (@{ParaT_args} 'si, 'so, 'a, 'b) morph
 end
 
 functor \<^eval>\<open>sfx_ParaT_nargs "IArrow_State"\<close>(
     structure AS : \<^eval>\<open>sfx_ParaT_nargs "IARROW_STATE_BASE"\<close>
     structure A : \<^eval>\<open>sfx_ParaT_nargs "IARROW"\<close>
-    sharing type A.cat = AS.cat
+    sharing type A.morph = AS.morph
   ) : \<^eval>\<open>sfx_ParaT_nargs "IARROW_STATE"\<close> =
 struct
 open AS
@@ -159,7 +182,7 @@ signature \<^eval>\<open>sfx_ParaT_nargs "IKLEISLI_ARROW_STATE"\<close> =
 sig
   structure K : \<^eval>\<open>sfx_ParaT_nargs "IKLEISLI"\<close>
   include \<^eval>\<open>sfx_ParaT_nargs "IARROW_STATE"\<close>
-  where type (@{ParaT_args} 'i, 'j, 'a, 'b) cat = (@{ParaT_args} 'i, 'j, 'a, 'b) K.kleisli
+  where type (@{ParaT_args} 'i, 'j, 'a, 'b) morph = (@{ParaT_args} 'i, 'j, 'a, 'b) K.kleisli
 end
 
 functor \<^eval>\<open>sfx_ParaT_nargs "IKleisli_Arrow_State"\<close>(

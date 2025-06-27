@@ -48,6 +48,7 @@ sig
   val get : unit -> (@{ParaT_args} s) state
   val put : s -> (@{ParaT_args} unit) state
 
+  val run : s -> (@{ParaT_args} 'a) state -> (@{ParaT_args} (s, 'a) SR.result) M.t
   val eval : s -> (@{ParaT_args} 'a) state -> (@{ParaT_args} 'a) M.t
   val exec : s -> (@{ParaT_args} 'a) state -> (@{ParaT_args} s) M.t
 end
@@ -90,8 +91,9 @@ fun put s = state (fn _ => SR.result s ())
 end
 open MS
 
-fun eval s st = st s |> M.map SR.value
-fun exec s st = st s |> M.map SR.state
+fun run s st = st s
+fun eval s = run s #> M.map SR.value
+fun exec s = run s #> M.map SR.state
 
 end
 
@@ -117,33 +119,51 @@ functor \<^eval>\<open>sfx_ParaT_nargs "Monad_Exception_State_Trans"\<close>(
     where type (@{ParaT_args} 'a) t = (@{ParaT_args} 'a) S.t
   =
 struct
-
 open M
 fun throw e = S.lift (M.throw e)
 fun catch m f s = M.catch (m s) (fn e => f e s)
 open S
+end
 
+functor \<^eval>\<open>sfx_ParaT_nargs "Monad_State_State_Trans"\<close>(A :
+  sig
+    structure M : \<^eval>\<open>sfx_ParaT_nargs "MONAD_STATE_BASE"\<close>
+    structure S : \<^eval>\<open>sfx_ParaT_nargs "STATE_TRANS"\<close>
+    sharing type S.M.t = M.t
+  end
+  ) :
+    \<^eval>\<open>sfx_ParaT_nargs "MONAD_STATE_BASE"\<close>
+    where type (@{ParaT_args} 'a) t = (@{ParaT_args} 'a) A.S.t
+  =
+struct
+open A A.M
+open S
+structure SR = A.M.SR
+type s = A.M.s
+fun state fs = S.lift (A.M.state fs)
+fun get _ = S.lift (A.M.get ())
+fun put s = S.lift (A.M.put s)
 end
 
 signature \<^eval>\<open>sfx_ParaT_nargs "ARROW_STATE_BASE"\<close> =
 sig
   include \<^eval>\<open>sfx_ParaT_nargs "ARROW_BASE"\<close>
   type s
-  val get : unit -> (@{ParaT_args} 'a, s) cat
-  val put : unit -> (@{ParaT_args} s, unit) cat
+  val get : unit -> (@{ParaT_args} 'a, s) morph
+  val put : unit -> (@{ParaT_args} s, unit) morph
 end
 
 signature \<^eval>\<open>sfx_ParaT_nargs "ARROW_STATE"\<close> =
 sig
   include \<^eval>\<open>sfx_ParaT_nargs "ARROW_STATE_BASE"\<close>
-  val change : (@{ParaT_args} 'a * s, s) cat -> (@{ParaT_args} 'a, 'a) cat
-  val access : (@{ParaT_args} 'a * s, 'b) cat -> (@{ParaT_args} 'a, 'b) cat
+  val change : (@{ParaT_args} 'a * s, s) morph -> (@{ParaT_args} 'a) emorph
+  val access : (@{ParaT_args} 'a * s, 'b) morph -> (@{ParaT_args} 'a, 'b) morph
 end
 
 functor \<^eval>\<open>sfx_ParaT_nargs "Arrow_State"\<close>(
     structure AS : \<^eval>\<open>sfx_ParaT_nargs "ARROW_STATE_BASE"\<close>
     structure A : \<^eval>\<open>sfx_ParaT_nargs "ARROW"\<close>
-    sharing type A.cat = AS.cat
+    sharing type A.morph = AS.morph
   ) : \<^eval>\<open>sfx_ParaT_nargs "ARROW_STATE"\<close> =
 struct
 open AS
@@ -157,18 +177,17 @@ fun change f = access f &&& id ()
   >>> first (put ())
   >>> arr snd
 end
-
 end
 
 signature \<^eval>\<open>sfx_ParaT_nargs "KLEISLI_ARROW_STATE"\<close> =
 sig
   structure K : \<^eval>\<open>sfx_ParaT_nargs "KLEISLI"\<close>
   include \<^eval>\<open>sfx_ParaT_nargs "ARROW_STATE"\<close>
-  where type (@{ParaT_args} 'a, 'b) cat = (@{ParaT_args} 'a, 'b) K.kleisli
+  where type (@{ParaT_args} 'a, 'b) morph = (@{ParaT_args} 'a, 'b) K.kleisli
 end
 
 functor \<^eval>\<open>sfx_ParaT_nargs "Kleisli_Arrow_State"\<close>(
-    structure MS : \<^eval>\<open>sfx_ParaT_nargs "MONAD_STATE_BASE"\<close>
+    MS : \<^eval>\<open>sfx_ParaT_nargs "MONAD_STATE_BASE"\<close>
   ) : \<^eval>\<open>sfx_ParaT_nargs "KLEISLI_ARROW_STATE"\<close> =
 struct
 structure KA = \<^eval>\<open>sfx_ParaT_nargs "Kleisli_Arrow_Apply_Base"\<close>(MS)
