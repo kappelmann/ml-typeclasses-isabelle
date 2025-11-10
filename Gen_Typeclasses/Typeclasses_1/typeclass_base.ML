@@ -177,9 +177,9 @@ end
 signature \<^eval>\<open>sfx_ParaT_nargs "MONAD_EXCEPTION_BASE"\<close> =
 sig
   include \<^eval>\<open>sfx_ParaT_nargs "MONAD_BASE"\<close>
-  type @{ParaT_args encl = "(" ")"} exn
-  val throw : @{ParaT_args encl = "(" ")"} exn -> (@{ParaT_args} 'a) t
-  val catch : (@{ParaT_args} 'a) t -> (@{ParaT_args encl = "(" ")"} exn ->
+  type @{ParaT_args encl: "(" ")"} exn
+  val throw : @{ParaT_args encl: "(" ")"} exn -> (@{ParaT_args} 'a) t
+  val catch : (@{ParaT_args} 'a) t -> (@{ParaT_args encl: "(" ")"} exn ->
     (@{ParaT_args} 'a) t) -> (@{ParaT_args} 'a) t
 end
 
@@ -252,6 +252,4 @@ sig
   include \<^eval>\<open>sfx_ParaT_nargs "TRAVERSABLE_BASE"\<close>
   val lift : (@{ParaT_args} 'a) T.t -> (@{ParaT_args} 'a) t
 end
-
-
 

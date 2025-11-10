@@ -6,10 +6,16 @@ sig
   include \<^eval>\<open>sfx_ParaT_nargs "COROUTINE"\<close>
   structure AE : \<^eval>\<open>sfx_ParaT_nargs "ARROW_EXCEPTION_REPEAT"\<close>
   sharing type AE.morph = C.morph
-  val throw : @{ParaT_args encl = "(" ")"} AE.exn -> (@{ParaT_args} 'a, 'b, 'c) acoroutine
+  val throw : @{ParaT_args encl: "(" ")"} AE.exn -> (@{ParaT_args} 'a, 'b, 'c) acoroutine
   val cons : (@{ParaT_args} 'a, 'b) C.morph -> (@{ParaT_args} 'a, 'c, 'b) acoroutine ->
     (@{ParaT_args} 'a, 'b, 'c) acoroutine
-  val append : (@{ParaT_args} 'a, 'b) coroutine -> (@{ParaT_args} 'a, 'b) coroutine ->
+  val append : (@{ParaT_args} 'a, 'b, 'c) acoroutine -> (@{ParaT_args} 'a, 'b, 'c) acoroutine ->
+    (@{ParaT_args} 'a, 'c, 'b) acoroutine -> (@{ParaT_args} 'a, 'b, 'c) acoroutine
+  val append_co : (@{ParaT_args} 'a, 'b) coroutine -> (@{ParaT_args} 'a, 'b) coroutine ->
+    (@{ParaT_args} 'a, 'b) coroutine
+  val otherwise : (@{ParaT_args} 'a, 'b, 'c) acoroutine -> (@{ParaT_args} 'a, 'b, 'c) acoroutine ->
+    (@{ParaT_args} 'a, 'c, 'b) acoroutine -> (@{ParaT_args} 'a, 'b, 'c) acoroutine
+  val otherwise_co : (@{ParaT_args} 'a, 'b) coroutine -> (@{ParaT_args} 'a, 'b) coroutine ->
     (@{ParaT_args} 'a, 'b) coroutine
 
   val map : (@{ParaT_args} 'b1, 'b2) C.morph -> (@{ParaT_args}  'c1, 'c2) C.morph ->
@@ -35,8 +41,9 @@ sig
   val repeat_res : (@{ParaT_args} 'r, 'a) C.morph -> (@{ParaT_args} 'b, 'r res) C.morph ->
     (@{ParaT_args} 'a, 'b) coroutine -> (@{ParaT_args} 'a, 'r res) C.morph
 
-  val repeat_step_res : (@{ParaT_args} 'b * 'r, 'a) C.morph -> (@{ParaT_args} 'b * 'r, 'r res) C.morph ->
-    (@{ParaT_args} 'a, 'b) coroutine -> (@{ParaT_args} 'a * 'r, ('b * 'r) res) C.morph
+  val repeat_step_res : (@{ParaT_args} 'b * 'r, 'a) C.morph ->
+    (@{ParaT_args} 'b * 'r, 'r res) C.morph -> (@{ParaT_args} 'a, 'b) coroutine ->
+    (@{ParaT_args} 'a * 'r, ('b * 'r) res) C.morph
 
   val repeat_step_res_init : (@{ParaT_args} 'b * 'r, 'a) C.morph ->
     (@{ParaT_args} 'b * 'r, 'r res) C.morph -> (@{ParaT_args} 'b, 'a) C.morph ->
@@ -62,8 +69,16 @@ in
 fun throw e = AE.throw' e |> acoroutine
 
 fun cons f c = f >>> arr (rpair c) |> acoroutine
-fun append c1 c2 = AE.catch' (resume c1 >>> second (arr (fn c1 => append c1 c2))) (resume c2)
-  |> coroutine
+fun append c1 c2 c2' =
+  AE.catch' (resume c1 >>> second (arr (fn c1 => append_aux c1 c2' c2))) (resume c2) |> acoroutine
+and append_aux c1 c2 c2' =
+  AE.catch' (resume c1 >>> second (arr (fn c1 => append c1 c2' c2))) (resume c2) |> acoroutine
+fun append_co c1 c2 = append c1 c2 c2
+fun otherwise c1 c2 c2' =
+  AE.catch' (resume c1 >>> second (arr (fn c1 => AE.catch' (resume c1) (resume c2') |> acoroutine)))
+    (resume c2)
+  |> acoroutine
+fun otherwise_co c1 c2 = AE.catch' (resume c1) (resume c2) |> coroutine
 
 fun map f g c = resume c >>> (f *** arr (map2 g f)) |> acoroutine
 and map2 f g c = resume c >>> (f *** arr (map g f)) |> acoroutine
@@ -75,7 +90,7 @@ fun enum' next = next >>> arr (fn x => (x, enum' next)) |> coroutine
 fun enum_co co x = (fn _ => Co.resume co x >>= (arr fst &&& arr (fn (x, co) => enum_co co x)))
   |> Co.coroutine
 
-fun flat coco = (fn x => Co.resume coco x >>= (fn (co, coco) => resume (append co (flat coco)) x))
+fun flat coco = (fn x => Co.resume coco x >>= (fn (co, coco) => resume (append_co co (flat coco)) x))
   |> Co.coroutine
 
 datatype 'a res = Stop of 'a | Continue of 'a
